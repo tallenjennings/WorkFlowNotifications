@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone 
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -14,7 +14,7 @@ class OccurrenceService:
         self.engine = RecurrenceEngine()
 
     def generate_for_workflow(self, db: Session, workflow: WorkflowDefinition, horizon_days: int = 90) -> int:
-        now_utc = datetime.utcnow()
+        now_utc = datetime.now(timezone.utc)
         due_list = self.engine.generate_due_datetimes(
             workflow.recurrence_type,
             workflow.recurrence_rule,

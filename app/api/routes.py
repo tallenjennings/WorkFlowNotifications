@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from io import StringIO
 import csv
 
@@ -21,13 +21,14 @@ templates = Jinja2Templates(directory="app/templates")
 
 @router.get("/", response_class=HTMLResponse)
 def dashboard(request: Request, db: Session = Depends(get_db)):
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     due_today = db.scalars(select(WorkflowOccurrence).where(WorkflowOccurrence.due_at <= now)).all()
     overdue = db.scalars(select(WorkflowOccurrence).where(WorkflowOccurrence.status == OccurrenceStatus.overdue.value)).all()
     recent = db.scalars(
         select(WorkflowOccurrence).where(WorkflowOccurrence.status == OccurrenceStatus.completed.value)
     ).all()[-10:]
     return templates.TemplateResponse(
+        request,
         "dashboard.html",
         {"request": request, "due_today": due_today, "overdue": overdue, "recent": recent},
     )
@@ -36,7 +37,7 @@ def dashboard(request: Request, db: Session = Depends(get_db)):
 @router.get("/workflows", response_class=HTMLResponse)
 def list_workflows(request: Request, db: Session = Depends(get_db)):
     workflows = db.scalars(select(WorkflowDefinition).order_by(WorkflowDefinition.title)).all()
-    return templates.TemplateResponse("workflows.html", {"request": request, "workflows": workflows})
+    return templates.TemplateResponse(request, "workflows.html", {"request": request, "workflows": workflows})
 
 
 @router.post("/workflows")
@@ -63,7 +64,7 @@ def update_status(occ_id: int, status: str = Form(...), note: str = Form(""), db
     occ.completion_source = CompletionSource.manual.value
     occ.completion_note = note
     if status == OccurrenceStatus.completed.value:
-        occ.completed_at = datetime.utcnow()
+        occ.completed_at = datetime.now(timezone.utc)
     db.commit()
     return RedirectResponse("/", status_code=303)
 
@@ -71,7 +72,8 @@ def update_status(occ_id: int, status: str = Form(...), note: str = Form(""), db
 @router.get("/reports", response_class=HTMLResponse)
 def reports(request: Request, status: str | None = None, db: Session = Depends(get_db)):
     items = query_occurrences(db, status=status)
-    return templates.TemplateResponse("reports.html", {"request": request, "items": items})
+    return templates.TemplateResponse(request, "reports.html", {"request": request, "items": items})
+
 
 
 @router.get("/reports.csv")

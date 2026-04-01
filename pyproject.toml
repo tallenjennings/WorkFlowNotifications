@@ -16,6 +16,7 @@ dependencies = [
   "python-dotenv>=1.0",
   "pydantic-settings>=2.4",
   "passlib[bcrypt]>=1.7",
+  "bcrypt<4.0",
   "itsdangerous>=2.2",
   "email-validator>=2.2",
   "python-dateutil>=2.9"
@@ -34,3 +35,7 @@ testpaths = ["tests"]
 [build-system]
 requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+exclude = ["alembic*"]
