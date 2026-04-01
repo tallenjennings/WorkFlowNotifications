@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Due Today / Past Due</h2>
+<ul>
+{% for item in due_today %}
+<li>{{ item.workflow.title }} - {{ item.due_at }} - {{ item.status }}
+<form action="/occurrences/{{ item.id }}/status" method="post">
+<input name="status" placeholder="completed/skipped/deferred"/>
+<input name="note" placeholder="note"/>
+<button type="submit">Update</button>
+</form>
+</li>
+{% endfor %}
+</ul>
+<h2>Overdue</h2>
+<ul>{% for item in overdue %}<li>{{ item.workflow.title }} - {{ item.due_at }}</li>{% endfor %}</ul>
+<h2>Recently Completed</h2>
+<ul>{% for item in recent %}<li>{{ item.workflow.title }} - {{ item.completed_at }}</li>{% endfor %}</ul>
+{% endblock %}

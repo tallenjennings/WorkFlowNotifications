@@ -1,0 +1,11 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Occurrence Reports</h2>
+<table border="1">
+<tr><th>ID</th><th>Workflow</th><th>Due</th><th>Status</th><th>Completed</th></tr>
+{% for i in items %}
+<tr><td>{{ i.id }}</td><td>{{ i.workflow.title }}</td><td>{{ i.due_at }}</td><td>{{ i.status }}</td><td>{{ i.completed_at }}</td></tr>
+{% endfor %}
+</table>
+<a href="/reports.csv">Export CSV</a>
+{% endblock %}
