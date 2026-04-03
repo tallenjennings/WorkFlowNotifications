@@ -1,13 +1,35 @@
 {% extends 'base.html' %}
 {% block content %}
 <h2>Workflow Definitions</h2>
+{% if message %}<div class="flash">{{ message }}</div>{% endif %}
+
 <form method="post" action="/workflows">
-<input name="title" placeholder="title" required />
-<select name="recurrence_type">
-  <option>daily</option><option>weekly</option><option>monthly</option><option>quarterly</option><option>yearly</option>
-</select>
-<input name="timezone" value="UTC"/>
-<button type="submit">Create</button>
+  <input name="title" placeholder="title" required />
+  <select name="recurrence_type">
+    <option>daily</option>
+    <option>weekly</option>
+    <option selected>monthly</option>
+    <option>quarterly</option>
+    <option>yearly</option>
+  </select>
+  <input name="timezone" value="UTC"/>
+  <button type="submit">Create</button>
 </form>
-<ul>{% for wf in workflows %}<li>{{ wf.title }} ({{ wf.recurrence_type }})</li>{% endfor %}</ul>
+
+<table>
+<tr><th>Title</th><th>Recurrence</th><th>Timezone</th><th>Active</th><th>Actions</th></tr>
+{% for wf in workflows %}
+<tr>
+  <td>{{ wf.title }}</td>
+  <td>{{ wf.recurrence_type }}</td>
+  <td>{{ wf.timezone }}</td>
+  <td>{{ wf.active }}</td>
+  <td>
+    <form action="/workflows/{{ wf.id }}/generate" method="post">
+      <button type="submit">Generate 90 Days</button>
+    </form>
+  </td>
+</tr>
+{% endfor %}
+</table>
 {% endblock %}

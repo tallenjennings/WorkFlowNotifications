@@ -1,19 +1,60 @@
 {% extends 'base.html' %}
 {% block content %}
-<h2>Due Today / Past Due</h2>
-<ul>
+<h2>Dashboard</h2>
+{% if message %}<div class="flash">{{ message }}</div>{% endif %}
+
+<h3>Due Today / Past Due</h3>
+<table>
+<tr><th>Workflow</th><th>Due At</th><th>Status</th><th>Actions</th></tr>
 {% for item in due_today %}
-<li>{{ item.workflow.title }} - {{ item.due_at }} - {{ item.status }}
-<form action="/occurrences/{{ item.id }}/status" method="post">
-<input name="status" placeholder="completed/skipped/deferred"/>
-<input name="note" placeholder="note"/>
-<button type="submit">Update</button>
-</form>
-</li>
+<tr>
+  <td>{{ item.workflow.title }}</td>
+  <td>{{ item.due_at }}</td>
+  <td>{{ item.status }}</td>
+  <td class="actions">
+    <form action="/occurrences/{{ item.id }}/status" method="post">
+      <input name="status" placeholder="completed/skipped/deferred" required/>
+      <input name="note" placeholder="note"/>
+      <button type="submit">Update</button>
+    </form>
+    <form action="/occurrences/{{ item.id }}/trigger" method="post">
+      <button type="submit">Trigger Reminder</button>
+    </form>
+  </td>
+</tr>
 {% endfor %}
-</ul>
-<h2>Overdue</h2>
-<ul>{% for item in overdue %}<li>{{ item.workflow.title }} - {{ item.due_at }}</li>{% endfor %}</ul>
-<h2>Recently Completed</h2>
-<ul>{% for item in recent %}<li>{{ item.workflow.title }} - {{ item.completed_at }}</li>{% endfor %}</ul>
+</table>
+
+<h3>Overdue</h3>
+<table>
+<tr><th>Workflow</th><th>Due At</th><th>Status</th></tr>
+{% for item in overdue %}
+<tr><td>{{ item.workflow.title }}</td><td>{{ item.due_at }}</td><td>{{ item.status }}</td></tr>
+{% endfor %}
+</table>
+
+<h3>Upcoming</h3>
+<table>
+<tr><th>Workflow</th><th>Due At</th><th>Status</th><th>Trigger</th></tr>
+{% for item in upcoming %}
+<tr>
+  <td>{{ item.workflow.title }}</td>
+  <td>{{ item.due_at }}</td>
+  <td>{{ item.status }}</td>
+  <td>
+    <form action="/occurrences/{{ item.id }}/trigger" method="post">
+      <button type="submit">Trigger Reminder</button>
+    </form>
+  </td>
+</tr>
+{% endfor %}
+</table>
+
+<h3>Recently Completed</h3>
+<table>
+<tr><th>Workflow</th><th>Completed At</th><th>Note</th></tr>
+{% for item in recent %}
+<tr><td>{{ item.workflow.title }}</td><td>{{ item.completed_at }}</td><td>{{ item.completion_note }}</td></tr>
+{% endfor %}
+</table>
 {% endblock %}

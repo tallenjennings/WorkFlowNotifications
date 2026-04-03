@@ -50,3 +50,9 @@ uvicorn app.main:app --reload
 ```bash
 pytest
 ```
+
+## Maintenance
+```bash
+python scripts/clear_cache.py
+```
+Use this to remove Python/test/lint cache directories.

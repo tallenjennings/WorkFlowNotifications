@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime
 from io import StringIO
 import csv
 
@@ -13,6 +13,7 @@ from app.db.session import get_db
 from app.models.entities import WorkflowDefinition, WorkflowOccurrence
 from app.models.enums import CompletionSource, OccurrenceStatus
 from app.services.occurrences import OccurrenceService
+from app.services.reminders import ReminderService
 from app.services.reporting import query_occurrences
 
 router = APIRouter()
@@ -21,23 +22,37 @@ templates = Jinja2Templates(directory="app/templates")
 
 @router.get("/", response_class=HTMLResponse)
 def dashboard(request: Request, db: Session = Depends(get_db)):
-    now = datetime.now(timezone.utc)
+    now = datetime.utcnow()
     due_today = db.scalars(select(WorkflowOccurrence).where(WorkflowOccurrence.due_at <= now)).all()
     overdue = db.scalars(select(WorkflowOccurrence).where(WorkflowOccurrence.status == OccurrenceStatus.overdue.value)).all()
+    upcoming = db.scalars(
+        select(WorkflowOccurrence).where(WorkflowOccurrence.due_at > now).order_by(WorkflowOccurrence.due_at.asc())
+    ).all()[:20]
     recent = db.scalars(
-        select(WorkflowOccurrence).where(WorkflowOccurrence.status == OccurrenceStatus.completed.value)
-    ).all()[-10:]
+        select(WorkflowOccurrence)
+        .where(WorkflowOccurrence.status == OccurrenceStatus.completed.value)
+        .order_by(WorkflowOccurrence.completed_at.desc())
+    ).all()[:10]
     return templates.TemplateResponse(
-        request,
         "dashboard.html",
-        {"request": request, "due_today": due_today, "overdue": overdue, "recent": recent},
+        {
+            "request": request,
+            "due_today": due_today,
+            "overdue": overdue,
+            "upcoming": upcoming,
+            "recent": recent,
+            "message": request.query_params.get("message"),
+        },
     )
 
 
 @router.get("/workflows", response_class=HTMLResponse)
 def list_workflows(request: Request, db: Session = Depends(get_db)):
     workflows = db.scalars(select(WorkflowDefinition).order_by(WorkflowDefinition.title)).all()
-    return templates.TemplateResponse(request, "workflows.html", {"request": request, "workflows": workflows})
+    return templates.TemplateResponse(
+        "workflows.html",
+        {"request": request, "workflows": workflows, "message": request.query_params.get("message")},
+    )
 
 
 @router.post("/workflows")
@@ -52,7 +67,17 @@ def create_workflow(
     db.flush()
     OccurrenceService().generate_for_workflow(db, workflow)
     db.commit()
-    return RedirectResponse("/workflows", status_code=303)
+    return RedirectResponse("/workflows?message=Workflow+created", status_code=303)
+
+
+@router.post("/workflows/{workflow_id}/generate")
+def generate_occurrences(workflow_id: int, db: Session = Depends(get_db)):
+    workflow = db.get(WorkflowDefinition, workflow_id)
+    if not workflow:
+        raise HTTPException(status_code=404, detail="Workflow not found")
+    created = OccurrenceService().generate_for_workflow(db, workflow)
+    db.commit()
+    return RedirectResponse(f"/workflows?message=Generated+{created}+occurrences", status_code=303)
 
 
 @router.post("/occurrences/{occ_id}/status")
@@ -64,16 +89,25 @@ def update_status(occ_id: int, status: str = Form(...), note: str = Form(""), db
     occ.completion_source = CompletionSource.manual.value
     occ.completion_note = note
     if status == OccurrenceStatus.completed.value:
-        occ.completed_at = datetime.now(timezone.utc)
+        occ.completed_at = datetime.utcnow()
     db.commit()
-    return RedirectResponse("/", status_code=303)
+    return RedirectResponse("/?message=Occurrence+updated", status_code=303)
+
+
+@router.post("/occurrences/{occ_id}/trigger")
+async def trigger_occurrence(occ_id: int, db: Session = Depends(get_db)):
+    occ = db.get(WorkflowOccurrence, occ_id)
+    if not occ:
+        raise HTTPException(status_code=404, detail="Occurrence not found")
+    sent_count = await ReminderService().trigger_occurrence(db, occ)
+    db.commit()
+    return RedirectResponse(f"/?message=Triggered+{sent_count}+reminder(s)", status_code=303)
 
 
 @router.get("/reports", response_class=HTMLResponse)
 def reports(request: Request, status: str | None = None, db: Session = Depends(get_db)):
     items = query_occurrences(db, status=status)
-    return templates.TemplateResponse(request, "reports.html", {"request": request, "items": items})
-
+    return templates.TemplateResponse("reports.html", {"request": request, "items": items})
 
 
 @router.get("/reports.csv")

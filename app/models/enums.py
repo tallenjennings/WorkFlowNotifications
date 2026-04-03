@@ -1,13 +1,13 @@
-from enum import StrEnum
+from enum import Enum
 
 
-class Role(StrEnum):
+class Role(str, Enum):
     admin = "admin"
     manager = "manager"
     viewer = "viewer"
 
 
-class RecurrenceType(StrEnum):
+class RecurrenceType(str, Enum):
     daily = "daily"
     weekly = "weekly"
     monthly = "monthly"
@@ -16,7 +16,7 @@ class RecurrenceType(StrEnum):
     custom = "custom"
 
 
-class OccurrenceStatus(StrEnum):
+class OccurrenceStatus(str, Enum):
     pending = "pending"
     due = "due"
     overdue = "overdue"
@@ -26,13 +26,13 @@ class OccurrenceStatus(StrEnum):
     future = "future"
 
 
-class CompletionSource(StrEnum):
+class CompletionSource(str, Enum):
     manual = "manual"
     email_reply = "email_reply"
     system = "system"
 
 
-class RecipientType(StrEnum):
+class RecipientType(str, Enum):
     primary = "primary"
     escalation = "escalation"
     cc = "cc"
